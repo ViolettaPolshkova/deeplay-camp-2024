@@ -3,11 +3,12 @@ package io.deeplay.camp;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import io.deeplay.camp.bot.MyBots.BotStrategy;
+import io.deeplay.camp.bot.MyBots.ExpectiMaxBot;
+import io.deeplay.camp.bot.MyBots.MiniMaxBot;
 import io.deeplay.camp.entity.Board;
 import io.deeplay.camp.entity.Tile;
 import io.deeplay.camp.board.BoardService;
-import io.deeplay.camp.bot.BotStrategy;
-import io.deeplay.camp.bot.RandomBot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,8 @@ public class SelfPlay {
      * </p>
      */
     public void startBotGame() {
+        long startTime = System.currentTimeMillis();
+
         int totalBatches = (int) Math.ceil((double) gameCount / 50);
 
         for (int batch = 0; batch < totalBatches; batch++) {
@@ -79,7 +82,10 @@ public class SelfPlay {
         gameExecutor.shutdown();
         scheduler.shutdown();
 
-        saveResultsToJson();
+        long endTime = System.currentTimeMillis();
+        long duration = endTime - startTime;
+
+        saveResultsToJson(duration);
     }
 
     /**
@@ -92,8 +98,9 @@ public class SelfPlay {
      * @return null
      */
     private Void playSingleGame(boolean firstBotStarts) {
-        BotStrategy firstRandomBot = new RandomBot(1, "DarlingBot");
-        BotStrategy secondRandomBot = new RandomBot(2, "ViolaBot");
+
+        BotStrategy secondRandomBot = new ExpectiMaxBot(1, "ViolaBot", 2);
+        BotStrategy firstRandomBot = new MiniMaxBot(2, "DarlingBot", 2);
         Board board = new Board();
         BoardService boardLogic = new BoardService(board);
         BotStrategy currentBot = firstBotStarts ? firstRandomBot : secondRandomBot;
@@ -125,11 +132,11 @@ public class SelfPlay {
      * @param boardLogic The board logic to be used for making the move.
      */
     private void executeBotMove(BotStrategy botService, BoardService boardLogic) {
-        Callable<Tile> botMoveTask = () -> botService.getMakeMove(botService.id, boardLogic);
+        Callable<Tile> botMoveTask = () -> botService.getMove(botService.id, boardLogic);
         Future<Tile> futureMove = scheduler.schedule(botMoveTask, 0, TimeUnit.SECONDS);
 
         try {
-            var tile = futureMove.get(5, TimeUnit.SECONDS);
+            var tile = futureMove.get(5000, TimeUnit.SECONDS);
             if (tile != null) boardLogic.makeMove(botService.id, tile);
         } catch (TimeoutException e) {
             logger.error("Bot {} move timed out.", botService.id);
@@ -164,7 +171,7 @@ public class SelfPlay {
      * This method reads existing results from the file, adds the new results, and writes them back to the file.
      * </p>
      */
-    private void saveResultsToJson() {
+    private void saveResultsToJson(long duration) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
         File file = new File("game_results.json");
@@ -182,7 +189,7 @@ public class SelfPlay {
             resultsList = new ArrayList<>();
         }
 
-        Results newResults = new Results(gameCount, firstBotWins.get(), secondBotWins.get(), draws.get());
+        Results newResults = new Results(gameCount, firstBotWins.get(), secondBotWins.get(), draws.get(), duration);
         resultsList.add(newResults);
 
         try {
@@ -204,14 +211,16 @@ public class SelfPlay {
         public int firstBotWins;
         public int secondBotWins;
         public int draws;
+        public long duration; // Новое поле для времени выполнения
 
         public Results() {}
 
-        public Results(int totalGames, int firstBotWins, int secondBotWins, int draws) {
+        public Results(int totalGames, int firstBotWins, int secondBotWins, int draws, long duration) {
             this.totalGames = totalGames;
             this.firstBotWins = firstBotWins;
             this.secondBotWins = secondBotWins;
             this.draws = draws;
+            this.duration = duration;
         }
 
         public int getTotalGames() {
@@ -244,6 +253,14 @@ public class SelfPlay {
 
         public void setDraws(int draws) {
             this.draws = draws;
+        }
+
+        public long getDuration() {
+            return duration;
+        }
+
+        public void setDuration(long duration) {
+            this.duration = duration;
         }
     }
 }

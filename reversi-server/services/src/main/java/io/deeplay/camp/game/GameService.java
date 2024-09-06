@@ -1,7 +1,7 @@
 package io.deeplay.camp.game;
 
 import io.deeplay.camp.board.BoardService;
-import io.deeplay.camp.bot.RandomBot;
+import io.deeplay.camp.bot.MyBots.RandomBot;
 import io.deeplay.camp.display.DisplayServices;
 import io.deeplay.camp.entity.Bot;
 import io.deeplay.camp.entity.User;

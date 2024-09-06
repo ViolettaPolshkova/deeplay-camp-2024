@@ -1,5 +1,6 @@
-package io.deeplay.camp.bot;
+package io.deeplay.camp.bot.OldBots;
 
+import io.deeplay.camp.bot.MyBots.BotStrategy;
 import io.deeplay.camp.entity.Tile;
 import io.deeplay.camp.board.BoardService;
 import org.jetbrains.annotations.NotNull;
