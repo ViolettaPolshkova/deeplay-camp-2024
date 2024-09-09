@@ -7,6 +7,10 @@ import io.deeplay.camp.entity.Tile;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The BoardService class manages the game logic for a board game,
+ * handling player moves, validating moves, and determining game outcomes.
+ */
 public class BoardService {
 
     private final Board board;
@@ -14,16 +18,22 @@ public class BoardService {
     private long whiteChips;
     private long blackValidMoves;
     private long whiteValidMoves;
-    private int playerID;
-
+    /**
+     * Constructs a BoardService instance with the specified board.
+     * @param board The initial game board.
+     */
     public BoardService(Board board) {
         this.board = board;
         this.blackChips = board.getBlackChips();
         this.whiteChips = board.getWhiteChips();
-        playerID = 1;
     }
 
-    //!! Установка фишки на доску
+    /**
+     * Places a piece on the board at the specified coordinates for the specified player.
+     * @param x The x-coordinate on the board.
+     * @param y The y-coordinate on the board.
+     * @param player The player making the move.
+     */
     public void setPiece(int x, int y, int player) {
         long piece = 1L << (x + 8 * y);
         long tempChips;
@@ -153,28 +163,46 @@ public class BoardService {
                 board.setWhiteChips(whiteChips);
                 board.setBlackChips(blackChips);
             }
-            playerSwap();
         }
     }
 
-    //!! Убрать фишку
+    /**
+     * Removes a piece from the specified coordinates on the board.
+     * @param x The x-coordinate of the piece to be removed.
+     * @param y The y-coordinate of the piece to be removed.
+     */
     public void removePiece(int x, int y) {
         long mask = ~(1L << (x + 8 * y));
         blackChips &= mask;
         whiteChips &= mask;
     }
 
-    // Проверка на наличие фишки
+    /**
+     * Checks if there is a piece at the specified coordinates.
+     * @param x The x-coordinate.
+     * @param y The y-coordinate.
+     * @return True if a piece exists at the specified coordinates, false otherwise.
+     */
     public boolean hasPiece(int x, int y) {
         long mask = 1L << (x + 8 * y);
         return ((blackChips & mask) != 0) || ((whiteChips & mask) != 0);
     }
 
+    /**
+     * Returns the current board.
+     * @return The current board.
+     */
     public Board getBoard() {
         return board;
     }
 
-    // Проверка на возможность хода
+    /**
+     * Checks if the move at the specified coordinates is valid for the specified player.
+     * @param x The x-coordinate of the move.
+     * @param y The y-coordinate of the move.
+     * @param player The player making the move.
+     * @return True if the move is valid, false otherwise.
+     */
     public boolean isValidMove(int x, int y, int player) {
         createValidMoves();
         if (player == 1) {
@@ -186,7 +214,11 @@ public class BoardService {
         }
     }
 
-    // Получение возможных вариантов
+    /**
+     * Retrieves the valid moves for the specified player.
+     * @param player The player for whom to get valid moves.
+     * @return A bitmask of valid moves.
+     */
     public long getValidMoves(int player) {
         createValidMoves();
         long validMoves = 0x0000000000000000L;
@@ -198,7 +230,10 @@ public class BoardService {
         return validMoves;
     }
 
-    // Счёт игры
+    /**
+     * Calculates and returns the scores for both players.
+     * @return An array containing the scores of black and white players.
+     */
     public int[] score() {
         int[] score = new int[2];
 
@@ -215,7 +250,9 @@ public class BoardService {
         return score;
     }
 
-    // Создание возможных ходов
+    /**
+     * Generates valid moves for the current player.
+     */
     public void createValidMoves(){
         long allChips = blackChips | whiteChips;
         blackValidMoves = 0;
@@ -316,7 +353,11 @@ public class BoardService {
         whiteValidMoves &= ~allChips;
     }
 
-    // Вызов доски
+    /**
+     * Retrieves the current state of the board for the specified player.
+     * @param player The player for whom to get the board state.
+     * @return A StringBuilder representing the current state of the board.
+     */
     public StringBuilder getBoardState(int player) {
         createValidMoves();
         StringBuilder state = new StringBuilder();
@@ -350,50 +391,11 @@ public class BoardService {
         return state;
     }
 
-    public StringBuilder getBoardState() {
-        createValidMoves();
-        StringBuilder state = new StringBuilder();
-        state.append("\n\n");
-        for (int y = 0; y < 8; y++) {
-            state.append((8 - y) + " ");
-            for (int x = 0; x < 8; x++) {
-                if (hasPiece(x, y)) {
-                    if ((blackChips & (1L << (x + 8 * y))) != 0) {
-                        state.append("X ");
-                    } else {
-                        state.append("0 ");
-                    }
-                } else {
-                    long validMoves = (playerID == 1) ? blackValidMoves : whiteValidMoves;
-                    long mask = 1L << (x + 8 * y);
-                    if ((validMoves & mask) != 0) {
-                        state.append("* ");
-                    } else {
-                        state.append(". ");
-                    }
-                }
-            }
-            state.append("\n");
-        }
-        state.append(" ");
-        for (char i = 'a'; i <='h'; i++)
-            state.append(" " + i);
-
-        state.append("\n\n");
-        return state;
-    }
-
-    //Смена игрока
-    public void playerSwap(){
-        if(!checkForWin().isGameFinished()){
-            if(playerID == 1 && getValidMoves(2) != 0) {
-                playerID = 2;
-            } else if(playerID == 2 && getValidMoves(1) != 0) {
-                playerID = 1;
-            }
-        }
-    }
-
+    /**
+     * Retrieves the board state as a DTO for the specified player.
+     * @param player The player for whom to get the DTO.
+     * @return A string representation of the board state.
+     */
     public String getBoardStateDTO(int player){
         StringBuilder state = new StringBuilder("");
         for (int y = 0; y < 8; y++) {
@@ -419,35 +421,29 @@ public class BoardService {
         return "Board{" + state + '}';
     }
 
-    public String getBoardStateDTOWithoutValidMoves(){
-        StringBuilder state = new StringBuilder("");
-        for (int y = 0; y < 8; y++) {
-            for (int x = 0; x < 8; x++) {
-                if (hasPiece(x, y)) {
-                    if ((blackChips & (1L << (x + 8 * y))) != 0) {
-                        state.append("X ");
-                    } else {
-                        state.append("0 ");
-                    }
-                } else {
-                        state.append(". ");
-                    }
-            }
-        }
-
-        return "Board{" + state + '}';
-    }
-
+    /**
+     * Retrieves valid moves for the black player.
+     * @return A bitmask of valid moves for the black player.
+     */
     public long getBlackValidMoves() {
         createValidMoves();
         return blackValidMoves;
     }
 
+    /**
+     * Retrieves valid moves for the white player.
+     * @return A bitmask of valid moves for the white player.
+     */
     public long getWhiteValidMoves() {
         createValidMoves();
         return whiteValidMoves;
     }
 
+    /**
+     * Retrieves all valid tiles for the specified player.
+     * @param player The player for whom to get valid tiles.
+     * @return A list of valid tiles.
+     */
     public List<Tile> getAllValidTiles(int player) {
         List<Tile> validTiles = new ArrayList<>();
         long validMoves = getValidMoves(player);
@@ -462,6 +458,10 @@ public class BoardService {
         return validTiles;
     }
 
+    /**
+     * Retrieves all tiles occupied by black chips.
+     * @return A list of tiles occupied by black chips.
+     */
     public List<Tile> getAllBlackChips(){
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
@@ -475,6 +475,10 @@ public class BoardService {
         return tiles;
     }
 
+    /**
+     * Retrieves all tiles occupied by white chips.
+     * @return A list of tiles occupied by white chips.
+     */
     public List<Tile> getAllWhiteChips(){
         List<Tile> tiles = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
@@ -488,6 +492,12 @@ public class BoardService {
         return tiles;
     }
 
+    /**
+     * Executes a move for the specified player to the given tile.
+     * @param player The player making the move.
+     * @param tile The tile to which the player is moving.
+     * @return True if the move was successful, false otherwise.
+     */
     public boolean makeMove(int player, Tile tile) {
         int x = tile.getX();
         int y = tile.getY();
@@ -496,6 +506,11 @@ public class BoardService {
         return true;
     }
 
+    /**
+     * Retrieves the chips for the specified player.
+     * @param player The player for whom to retrieve the chips.
+     * @return A list of tiles occupied by the player's chips.
+     */
     public List<Tile> getChips(int player) {
         List<Tile> playerChips = new ArrayList<>();
         long chips;
@@ -513,6 +528,10 @@ public class BoardService {
         return playerChips;
     }
 
+    /**
+     * Checks for a win condition and returns the result.
+     * @return A GameFinished object indicating if the game is finished and the winner.
+     */
     public GameFinished checkForWin() {
         GameFinished gameFinished;
         int winner = 0;
@@ -535,6 +554,12 @@ public class BoardService {
         return new GameFinished(false, -1);
     }
 
+    /**
+     * Retrieves the piece at the specified coordinates.
+     * @param x The x-coordinate.
+     * @param y The y-coordinate.
+     * @return 1 for a black piece, 2 for a white piece, and 0 for an empty cell.
+     */
     public int getPiece(int x, int y) {
         long mask = 1L << (x + 8 * y);
 
@@ -547,19 +572,30 @@ public class BoardService {
         }
     }
 
+    /**
+     * Calculates the current round based on the scores.
+     * @return The current round number.
+     */
     public  int getRound(){
         return ((score()[0] + score()[1]) - 4);
     }
 
+    /**
+     * Constructs a new BoardService instance as a copy of the provided BoardService.
+     * @param oldBoardService The BoardService instance to copy.
+     */
     public BoardService(BoardService oldBoardService) {
         this.board = new Board(oldBoardService.board);
         this.blackChips = oldBoardService.blackChips;
         this.whiteChips = oldBoardService.whiteChips;
         this.blackValidMoves = oldBoardService.blackValidMoves;
         this.whiteValidMoves = oldBoardService.whiteValidMoves;
-        this.playerID = oldBoardService.playerID;
     }
 
+    /**
+     * Creates a copy of this BoardService instance.
+     * @return A new BoardService instance that is a copy of this one.
+     */
     public BoardService getCopy() {
         return new BoardService(this);
     }
@@ -572,27 +608,39 @@ public class BoardService {
         this.whiteValidMoves = whiteValidMoves;
     }
 
+    /**
+     * Retrieves the bitmask of black chips.
+     * @return The bitmask representing the black chips.
+     */
     public long getBlackChips() {
         return blackChips;
     }
 
-    public void setBlackChips(long blackChips) {
-        this.blackChips = blackChips;
-    }
-
+    /**
+     * Retrieves the bitmask of white chips.
+     * @return The bitmask representing the white chips.
+     */
     public long getWhiteChips() {
         return whiteChips;
     }
 
-    public void setWhiteChips(long whiteChips) {
-        this.whiteChips = whiteChips;
-    }
-
+    /**
+     * Checks if there is a black piece at the specified coordinates.
+     * @param x The x-coordinate.
+     * @param y The y-coordinate.
+     * @return True if there is a black piece, false otherwise.
+     */
     public boolean isBlackPiece(int x, int y) {
         long mask = 1L << (x + 8 * y);
         return ((blackChips & mask) != 0);
     }
 
+    /**
+     * Checks if there is a white piece at the specified coordinates.
+     * @param x The x-coordinate.
+     * @param y The y-coordinate.
+     * @return True if there is a white piece, false otherwise.
+     */
     public boolean isWhitePiece(int x, int y) {
         long mask = 1L << (x + 8 * y);
         return ((whiteChips & mask) != 0);
